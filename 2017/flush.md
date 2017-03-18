@@ -1,7 +1,7 @@
 
-=`block/blk-flush.c`
+#`block/blk-flush.c`
 
-==essence
+##essence
 
 * double buffer for flush request list
 * only one flush is in progress
@@ -11,11 +11,11 @@
 * add DATA req to the head of the `queue_head`
 * when flush is inflight, `__elv_next_request` will return NULL for flush-req unqueueable queue
 
-==`blk_insert_flush`
+##`blk_insert_flush`
 
-=examples
+#examples
 
-==one flush
+##one flush
 
 write cached enabled, but without FUA support: policy is PREFLUSH | DATA | POSTFLUSH
 
@@ -93,7 +93,7 @@ blk_insert_flush
             * kick the queue to avoid stall
 
 ```
-==two flush
+##two flush
 
 write cache enabled, and without FUA support.
 
@@ -134,9 +134,9 @@ write cache enabled, and without FUA support.
         * start flush machinery for B: PREFLUSH
 ```
 
-=question
+#question
 
-==filesystem consistency
+##filesystem consistency
 
 write cache: `request_queue->queue_flags & (1 << QUEUE_FLAG_WC)`
 
