@@ -217,3 +217,36 @@ tc->origin_size = get_dev_size(tc->origin_dev->bdev)
             * bio_1 needs break sharing and is deferred again
             * flush ??
 
+## b-tree layout
+
+* `dm_btree_info`
+
+* `btree_node`: leaf node and internal node
+
+* `shadow_spine`
+    * current btree node and its parent node
+
+* `ro_spine`
+    * a readonly variant of `shadow_spine`
+
+### thin detail b-tree
+
+* `pmd->detail_info`
+    * 1 level
+    * no inc/dec/equal
+
+### data block mapping b-tree
+
+* `pmd->info`
+    * context: `pmd->data_sm`
+    * inc/dec/equal: `data_block_inc|dec|equal`
+    * 2 level
+        * it can be used a 1-level b-tree
+            * thin id to a sub b-tree
+                * `pmd->tl_info`
+                * scenario: new thin and delete thin
+                    * new a b-tree (bl_info), and insert it
+            * virtual block to block_time b-tree
+                * `pmd->bl_info`
+                * scenario: remove block range of a thin device
+
