@@ -88,8 +88,10 @@ dmsetup create thin_1 --table '0 N thin /dev/mapper/pool 1'
 
 #### `thin_ctr`
 
-`thin_c`
-`dm_thin_device`
+* `thin_c`
+    * `dm_target->private = tc`
+        * `dm_thin_device`
+            * `thin_c->td = td`
 
 * `tc::origin_dev`: external snapshot
 
@@ -125,4 +127,93 @@ tc->origin_size = get_dev_size(tc->origin_dev->bdev)
     * `__close_device`
 
 ## new block
+
+### `thin_bio_map`
+
+* bio prision
+    * hold ?
+    * virtual cell
+        * within the same block of a thin device
+    * data cell or physical cell
+        * within the same block of the data device
+
+* bio hook ?
+
+* `__find_block`
+    * `dm_btree_lookup(pmd->nb_info, pmd->root, {id, block}, &value)`
+    * `unpack_lookup_result`
+        * result->shared = __snapshotted_since(td, blk_time)
+            * if the block is provisioned before snapshot, it's shared
+
+* defer
+    * bio:
+        * flush/discard
+        * bio in virtual cell
+            * when the physical is found and it's not shared
+        * bio in physical cell
+            * when the physical cell is appending for process
+    * cell:
+        * virtual cell when the status of its physical block is shared or unknown
+
+* throttle
+    * flush and discard bio
+
+* prefetch ?
+
+* prepare ?
+    * mapping
+        * `struct dm_thin_new_mapping`: throttle the creation of new mapping ?
+    * discard
+    * `discard_pt2`
+
+* `process_deferred_bios`
+    * for each thin process cells and bios
+    * commit if timeouted or got flush bios
+
+* `provision_block`
+    * `alloc_data_block`
+        * `dm_pool_alloc_data_block`
+            * `dm_sm_new_block(pmd->data_sm)`
+                * find a block in bitmap btree with a ref cnt valued as 0
+                * inc the ref cnt of the free block
+    * `schedule_zero`
+        * `process_prepared_mapping((struct dm_thin_new_mapping *)m)`
+            * `dm_thin_insert_block`
+                * `dm_btree_insert_notify`
+            * remap bio or cell
+
+* quiesce during copy: for block sharing
+    * add `dm_thin_new_mapping` to `pool->shared_read_ds`
+    * `dm_deferred_entry_inc` when read the shared block
+        * `h->shared_read_entry`
+    * `thin_endio`
+
+* `inc_all_io_entry`
+    * `h->all_io_entry` for discard ?
+        * `thin_endio`
+
+* `process_shared_bio`
+    * `break_sharing`
+        * alloc_data_block
+        * schedule_internal_copy
+            * schedule_copy
+                * dm_kcopyd_copy
+                * complete_mapping_preparation
+                    * atomic_dec_and_test(&m->prepare_actions)
+                    * defer to worker: add to `pool->prepared_mappings`
+                        * remap and issue directly ?
+
+    * `cell_defer_no_holder`
+
+
+* sequence
+    * issue sequence ?
+    * out-of-order ?
+        * fs will wait for the completion of bio_1 ?
+        * bio_1, bio_2 + flush + fua
+            * bio_1 is deferred in a cell
+            * a flush without data from dm
+                * flush is defered to defered bio
+            * bio_1 needs break sharing and is deferred again
+            * flush ??
 
